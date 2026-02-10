@@ -182,23 +182,36 @@ struct AetheriumView: View {
                             }
                         }
                         HStack(spacing: 12) {
-                            TextField("メッセージを入力...", text: $inputText).textFieldStyle(.plain).padding(.horizontal, 16).padding(.vertical, 10).background(Capsule().fill(Color.primary.opacity(0.05))).onSubmit { let t = inputText; inputText = ""; vm.sendMessage(t) }
-                            Button(action: { let t = inputText; inputText = ""; vm.sendMessage(t) }) { Image(systemName: "arrow.up.circle.fill").font(.system(size: 32)).foregroundStyle(inputText.isEmpty ? AnyShapeStyle(Color.gray) : AnyShapeStyle(Color.blue.gradient)) }.buttonStyle(.plain).disabled(inputText.isEmpty)
+                            TextField("メッセージを入力...", text: $inputText).textFieldStyle(.plain).padding(.horizontal, 16).padding(.vertical, 10).background(Capsule().fill(Color.primary.opacity(0.05))).onSubmit { if !vm.isGenerating { let t = inputText; inputText = ""; vm.sendMessage(t) } }
+                            if vm.isGenerating {
+                                Button(action: { vm.stopGeneration() }) {
+                                    Image(systemName: "stop.circle.fill")
+                                        .font(.system(size: 32))
+                                        .foregroundStyle(Color.red.gradient)
+                                }
+                                .buttonStyle(.plain)
+                            } else {
+                                Button(action: { if !vm.isGenerating { let t = inputText; inputText = ""; vm.sendMessage(t) } }) {
+                                    Image(systemName: "arrow.up.circle.fill")
+                                        .font(.system(size: 32))
+                                        .foregroundStyle(inputText.isEmpty ? AnyShapeStyle(Color.gray) : AnyShapeStyle(Color.blue.gradient))
+                                }
+                                .buttonStyle(.plain)
+                                .disabled(inputText.isEmpty)
+                            }
                         }.padding(.horizontal, 16).padding(.vertical, 12).background(.ultraThinMaterial)
                     }
                     .toolbar {
                         ToolbarItemGroup(placement: .primaryAction) {
                             HStack(spacing: 8) {
-                                Button(action: { if vm.isGenerating { vm.stopGeneration() } }) {
-                                    HStack(spacing: 6) {
-                                        ZStack {
-                                            Image(systemName: "waveform").foregroundStyle(Color.secondary).opacity(vm.isGenerating ? 0 : 1)
-                                            Image(systemName: "rays").rotationEffect(.degrees(rotationAngle)).foregroundStyle(Color.blue.gradient).opacity(vm.isGenerating ? 1 : 0).onAppear { withAnimation(.linear(duration: 2).repeatForever(autoreverses: false)) { rotationAngle = 360 } }
-                                        }.frame(width: 18)
-                                        Text(vm.isGenerating ? "Generating..." : "Ready").font(.system(size: 11, weight: .bold, design: .rounded)).foregroundColor(vm.isGenerating ? .primary : .secondary)
-                                        if vm.isGenerating { Image(systemName: "stop.circle.fill").foregroundColor(.red).font(.system(size: 14)) }
-                                    }.padding(.leading, 8).padding(.trailing, vm.isGenerating ? 8 : 4).padding(.vertical, 4)
-                                }.buttonStyle(.plain).disabled(!vm.isGenerating)
+                                HStack(spacing: 6) {
+                                    ZStack {
+                                        Image(systemName: "waveform").foregroundStyle(Color.secondary).opacity((vm.isGenerating || vm.isAudioPlaying) ? 0 : 1)
+                                        Image(systemName: "rays").rotationEffect(.degrees(rotationAngle)).foregroundStyle(Color.blue.gradient).opacity((vm.isGenerating || vm.isAudioPlaying) ? 1 : 0).onAppear { rotationAngle = 0; withAnimation(.linear(duration: 2).repeatForever(autoreverses: false)) { rotationAngle = 360 } }
+                                    }.frame(width: 18)
+                                    Text(vm.isGenerating ? "Generating..." : (vm.isAudioPlaying ? "Playing..." : "Ready")).font(.system(size: 11, weight: .bold, design: .rounded)).foregroundColor((vm.isGenerating || vm.isAudioPlaying) ? .primary : .secondary)
+                                }
+                                .padding(.leading, 8).padding(.trailing, vm.isGenerating ? 8 : 4).padding(.vertical, 4)
                                 Divider().frame(height: 16).padding(.horizontal, 2)
                                 Button(action: { withAnimation { inputText = ""; vm.resetSession() } }) { Text("Exit").fontWeight(.medium).foregroundColor(.red) }.buttonStyle(.bordered).controlSize(.small)
                                 Spacer().frame(width: 6)
